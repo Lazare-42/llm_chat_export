@@ -172,7 +172,7 @@ def make_simple(dest, conversations, contacts):
                     print(f"\t\tNo attachments for a message: {name}, {date}")
 
 
-def fetch_data(db_file, key, manual=False, chats=None):
+def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None):
     """Load SQLite data into dicts."""
 
     contacts = {}
@@ -249,6 +249,14 @@ def fetch_data(db_file, key, manual=False, chats=None):
         cid = result[1]
         if cid and cid in convos:
             convos[cid].append(content)
+
+    # Insert the new filtering code here
+    if conversation_id is not None:
+        filtered_convos = {}
+        for cid, messages in convos.items():
+            if contacts[cid]["name"] == conversation_id or contacts[cid]["id"] == conversation_id:
+                filtered_convos[cid] = messages
+        return filtered_convos, contacts
 
     if db_file_decrypted.exists():
         db_file_decrypted.unlink()
@@ -532,6 +540,11 @@ def merge_with_old(dest, old):
     default=False,
     help="Whether to manually decrypt the db",
 )
+@click.option(
+    "--conversation-id",
+    "-i",
+    help="Identifier of the conversation to be exported",
+)
 def main(
     dest,
     old=None,
@@ -541,6 +554,7 @@ def main(
     manual=False,
     chats=None,
     list_chats=None,
+    conversation_id=None,
 ):
     """
     Read the Signal directory and output attachments and chat files to DEST directory.
@@ -578,7 +592,9 @@ def main(
 
     if log:
         print(f"\nFetching data from {db_file}\n")
-    convos, contacts = fetch_data(db_file, key, manual=manual, chats=chats)
+    convos, contacts = fetch_data(db_file, key, manual=manual, chats=chats, conversation_id=conversation_id)
+
+    # ... existing code ...
 
     if list_chats:
         names = sorted(v["name"] for v in contacts.values() if v["name"] is not None)
