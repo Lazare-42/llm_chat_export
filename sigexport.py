@@ -6,7 +6,9 @@ import os
 import shutil
 from pathlib import Path
 from datetime import datetime
+from babel.dates import format_datetime
 import re
+import locale
 
 import click
 from pysqlcipher3 import dbapi2 as sqlcipher
@@ -16,6 +18,11 @@ from bs4 import BeautifulSoup
 
 log = False
 
+# Set the locale to French
+try:
+    locale.setlocale(locale.LC_TIME, "fr_FR")
+except locale.Error:
+    print("French locale not supported")
 
 def source_location():
     """Get OS-dependent source location."""
@@ -85,7 +92,7 @@ def copy_attachments(src, dest, conversations, contacts):
                     print(f"\t\tNo attachments for a message: {name}")
 
 
-def make_simple(dest, conversations, contacts):
+def make_simple(dest, conversations, contacts, year=None, attachments_only=False):
     """Output each conversation into a simple text file."""
 
     dest = Path(dest)
@@ -107,24 +114,32 @@ def make_simple(dest, conversations, contacts):
                 if "sent_at" in msg
                 else None
             )
+            if attachments_only and ("attachments" not in msg or not msg["attachments"]):
+                continue  # Skip this message if there are no attachments
 
             if timestamp is None:
                 if log:
                     print("\t\tNo timestamp or sent_at; date set to 1970")
-                date = "1970-01-01 00:00"
+                date = datetime(year=1970, month=1, day=1)
             else:
-                date = datetime.fromtimestamp(timestamp / 1000.0).strftime(
-                    "%Y-%m-%d %H:%M"
-                )
+                date = datetime.fromtimestamp(timestamp / 1000.0)
+              # Filter by year if specified
+            if year is not None and date.year != year:
+                continue  # Skip this message if it's not from the specified year
+
+            date_str = date.strftime("%Y-%m-%d %H:%M")
+            
+            ## do NOT translate when writing to file
+            ##date_str = date.strftime("%d %B %Y")
 
             if log:
-                print(f"\t\tDoing {name}, msg: {date}")
+                print(f"\t\tDoing {name}, msg: {date_str}")
 
             try:
                 body = msg["body"]
             except KeyError:
                 if log:
-                    print(f"\t\tNo body:\t\t{date}")
+                    print(f"\t\tNo body:\t\t{date_str}")
                 body = ""
             if body is None:
                 body = ""
@@ -145,7 +160,7 @@ def make_simple(dest, conversations, contacts):
                         sender = contacts[msg["conversationId"]]["name"]
                 except KeyError:
                     if log:
-                        print(f"\t\tNo sender:\t\t{date}")
+                        print(f"\t\tNo sender:\t\t{date_str}")
 
             try:
                 attachments = msg["attachments"]
@@ -166,10 +181,10 @@ def make_simple(dest, conversations, contacts):
                     ]:
                         body += "!"
                     body += f"[{file_name}](./{path})  "
-                print(f"[{date}] {sender}: {body}", file=mdfile)
+                print(f"[{date_str}] {sender}: {body}", file=mdfile)
             except KeyError:
                 if log:
-                    print(f"\t\tNo attachments for a message: {name}, {date}")
+                    print(f"\t\tNo attachments for a message: {name}, {date_str}")
 
 
 def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None):
@@ -270,7 +285,8 @@ def fix_names(contacts):
     for key, item in contacts.items():
         contact_name = item["number"] if item["name"] is None else item["name"]
         if contacts[key]["name"] is not None:
-            contacts[key]["name"] = "".join(x for x in contact_name if x.isalnum())
+            contacts[key]["name"] = ''.join(x for x in contact_name if x.isalnum() or x.isspace())
+
 
     return contacts
 
@@ -348,6 +364,9 @@ def create_html(dest, msgs_per_page=100):
                 date, sender, body = msg
                 sender = sender[1:-1]
                 date, time = date[1:-1].replace(",", "").split(" ")
+
+
+                
                 body = md.convert(body)
 
                 # links
@@ -545,6 +564,19 @@ def merge_with_old(dest, old):
     "-i",
     help="Identifier of the conversation to be exported",
 )
+@click.option(
+    "--year",
+    "-y",
+    type=int,
+    default=None,
+    help="Only include messages from this year (e.g., 2023)."
+)
+@click.option(
+    "--attachments-only",
+    is_flag=True,
+    help="Only include messages with attachments."
+)
+
 def main(
     dest,
     old=None,
@@ -555,6 +587,8 @@ def main(
     chats=None,
     list_chats=None,
     conversation_id=None,
+    year=None,
+    attachments_only=False,
 ):
     """
     Read the Signal directory and output attachments and chat files to DEST directory.
@@ -616,7 +650,7 @@ def main(
     print("\nCopying and renaming attachments")
     copy_attachments(src, dest, convos, contacts)
     print("\nCreating markdown files")
-    make_simple(dest, convos, contacts)
+    make_simple(dest, convos, contacts, year, attachments_only)
     if old:
         print(f"\nMerging old at {old} into output directory")
         print("No existing files will be deleted or overwritten!")
