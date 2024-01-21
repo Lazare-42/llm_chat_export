@@ -376,21 +376,31 @@ def create_html(dest, msgs_per_page=100):
 
                 # images
                 soup = BeautifulSoup(body, "html.parser")
+
+                # images
                 imgs = soup.find_all("img")
+                # Create a container for images if there are images
+                if imgs:
+                    img_grid_container = soup.new_tag('div', **{'class': 'img-grid'})
+
                 for im in imgs:
                     if im.get("src"):
                         temp = BeautifulSoup(figure_template, "html.parser")
                         src = im["src"]
-                        temp.figure.div.label.div.img["src"] = src
                         temp.figure.label.img["src"] = src
-
                         alt = im["alt"]
-                        temp.figure.label["for"] = alt
                         temp.figure.label.img["alt"] = alt
                         temp.figure.input["id"] = alt
-                        temp.figure.div.label["for"] = alt
-                        temp.figure.div.label.div.img["alt"] = alt
-                        im.replace_with(temp)
+                        temp.figure.label["for"] = alt
+        
+                        #  Add the figure to the img-grid container
+                        img_grid_container.append(temp.figure)
+
+                # Replace old images with new img-grid container
+                for im in imgs:
+                    im.replace_with(img_grid_container)
+                    # voice notes
+                    voices = soup.select(r"a[href*=\.m4a]")
 
                 # voice notes
                 voices = soup.select(r"a[href*=\.m4a]")

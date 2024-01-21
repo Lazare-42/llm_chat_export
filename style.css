@@ -16,11 +16,14 @@ body {
 }
 
 .msg {
-    width: 70ch;
+    width: 75%;
     border-radius: 5px;
     padding: 0.8em;
-    background-color: #cecace;
+    background-color: #E5EBFF;
+    margin-left: auto; /* centers the div */
+    margin-right: auto; /* centers the div */
 }
+
 
 .msg.me {
     margin-left: 300px;
@@ -62,9 +65,37 @@ div {
     word-wrap: break-word;
 }
 
+/* New container for image grid */
+.img-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Creates a responsive grid layout */
+    gap: 10px; /* Adjust the gap between images as needed */
+}
+
+/* Adjust .img-container for new layout */
+.img-container {
+    display: block; /* Change from flex to block if using grid layout */
+}
+
+/* Add a flex container around images
+.img-container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px; /* Adjust the gap between images as needed */
+} */
+
+/* Style for individual images */
+figure {
+    margin: 0; /* Remove default margin from figures */
+    width: 100%; /* Make figure take full width of container */
+    display: block; /* Block display for stacking */
+}
+
+/* Style for images */
 figure > label > img, video {
-    display: block;
-    width: 300px;
+    max-width: 100%; /* Ensure the image is fully contained within its box */
+    height: auto; /* Maintain aspect ratio */
 }
 
 label > img {
