@@ -1,5 +1,30 @@
 from pysqlcipher3 import dbapi2 as sqlcipher
 import json
+import uuid
+
+def add_file_name(msg, log):
+    if 'attachments' in msg and isinstance(msg['attachments'], list):
+        for att in msg['attachments']:
+            if 'fileName' not in att or not att['fileName']:
+                # Generate a unique file name based on contentType
+                extension = determine_extension(att)
+                random_name = str(uuid.uuid4())
+                att['fileName'] = random_name + extension
+                if log:
+                    print(f"Generated fileName: {att['fileName']} for attachment in message: {msg.get('id')}")
+
+    return msg  # Return the modified message
+
+
+def determine_extension(att):
+    # Determine file extension based on contentType
+    if 'contentType' in att:
+        if att['contentType'] == 'image/jpeg':
+            return '.jpg'
+        elif att['contentType'] == 'image/png':
+            return '.png'
+        # Add other content types as needed
+    return ''  # Default, no extension
 
 
 def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None, log=False):
@@ -78,6 +103,16 @@ def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None, log
         content = json.loads(result[0])
         cid = result[1]
         if cid and cid in convos:
+            # Process each message to handle attachments
+            if isinstance(content, dict):
+                # Assume content represents a single message
+                #process_message(content, log)
+                print("dict")
+                # Process the message
+                add_file_name(content, log)
+            else:
+                print("NOT A DICT??")
+                exit
             convos[cid].append(content)
 
     # Insert the new filtering code here
