@@ -14,7 +14,7 @@ import click
 import markdown
 import uuid
 from bs4 import BeautifulSoup
-from get_data import fetch_data
+from get_data import fetch_data, filter_data
 
 
 log = False
@@ -93,7 +93,7 @@ def copy_attachments(src, dest, conversations, contacts):
                     print(f"\t\tNo attachments for a message: {name}")
 
 
-def make_simple(dest, conversations, contacts, year=None, attachments_only=False):
+def make_simple(dest, conversations, contacts):
     """Output each conversation into a simple text file."""
 
     dest = Path(dest)
@@ -115,8 +115,6 @@ def make_simple(dest, conversations, contacts, year=None, attachments_only=False
                 if "sent_at" in msg
                 else None
             )
-            if attachments_only and ("attachments" not in msg or not msg["attachments"]):
-                continue  # Skip this message if there are no attachments
 
             if timestamp is None:
                 if log:
@@ -124,9 +122,6 @@ def make_simple(dest, conversations, contacts, year=None, attachments_only=False
                 date = datetime(year=1970, month=1, day=1)
             else:
                 date = datetime.fromtimestamp(timestamp / 1000.0)
-              # Filter by year if specified
-            if year is not None and date.year != year:
-                continue  # Skip this message if it's not from the specified year
 
             date_str = date.strftime("%Y-%m-%d %H:%M")
             
@@ -169,7 +164,8 @@ def make_simple(dest, conversations, contacts, year=None, attachments_only=False
                     file_name = att["fileName"]
                     # some file names are None
                     if file_name is None:
-                        file_name = "None"
+                        print('File name is none. You have an issue with data creation')
+                        exit()
                     path = Path("media") / file_name
                     path = Path(str(path).replace(" ", "%20"))
                     if path.suffix and path.suffix.split(".")[1] in [
@@ -547,6 +543,7 @@ def main(
     if log:
         print(f"\nFetching data from {db_file}\n")
     convos, contacts = fetch_data(db_file, key, manual=manual, chats=chats, conversation_id=conversation_id, log=log)
+    convos, contacts = filter_data(convos, contacts, year, attachments_only, log=log)
 
     # ... existing code ...
 
@@ -570,7 +567,7 @@ def main(
     print("\nCopying and renaming attachments")
     copy_attachments(src, dest, convos, contacts)
     print("\nCreating markdown files")
-    make_simple(dest, convos, contacts, year, attachments_only)
+    make_simple(dest, convos, contacts)
     if old:
         print(f"\nMerging old at {old} into output directory")
         print("No existing files will be deleted or overwritten!")

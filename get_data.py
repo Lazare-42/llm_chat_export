@@ -1,6 +1,8 @@
 from pysqlcipher3 import dbapi2 as sqlcipher
 import json
 import uuid
+import sys
+from datetime import datetime
 
 def add_file_name(msg, log):
     if 'attachments' in msg and isinstance(msg['attachments'], list):
@@ -17,14 +19,7 @@ def add_file_name(msg, log):
 
 
 def determine_extension(att):
-    # Determine file extension based on contentType
-    if 'contentType' in att:
-        if att['contentType'] == 'image/jpeg':
-            return '.jpg'
-        elif att['contentType'] == 'image/png':
-            return '.png'
-        # Add other content types as needed
-    return ''  # Default, no extension
+    return '.' + att['contentType'].split('/')[1]
 
 
 def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None, log=False):
@@ -104,15 +99,12 @@ def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None, log
         cid = result[1]
         if cid and cid in convos:
             # Process each message to handle attachments
-            if isinstance(content, dict):
-                # Assume content represents a single message
-                #process_message(content, log)
-                print("dict")
-                # Process the message
-                add_file_name(content, log)
-            else:
-                print("NOT A DICT??")
+            if not isinstance(content, dict):
+                print("NOT A DICT??. Review the data you're loading.")
                 exit
+            else:
+                # Create missing file names
+                add_file_name(content, log)
             convos[cid].append(content)
 
     # Insert the new filtering code here
@@ -127,3 +119,38 @@ def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None, log
         db_file_decrypted.unlink()
 
     return convos, contacts
+
+def filter_data(conversations, contacts, year=None, attachments_only=False, log=False):
+    print(attachments_only, year)
+    exit
+    filtered_convos = {}
+    for key, messages in conversations.items():
+        filtered_messages = []
+        for msg in messages:
+            # Check for year filter
+            timestamp = msg.get("timestamp") or msg.get("sent_at")
+            if year is not None and timestamp:
+                date = datetime.fromtimestamp(timestamp / 1000.0)
+                if date.year != year:
+                    continue  # Skip messages not from the specified year
+
+            # Check for attachments-only filter
+            if attachments_only and ("attachments" not in msg or not msg["attachments"]):
+                continue  # Skip messages without attachments
+
+            # If the message passes all filters, add it to filtered messages
+            filtered_messages.append(msg)
+
+        if filtered_messages:
+            filtered_convos[key] = filtered_messages
+    return filtered_convos, contacts
+
+
+## examples of sanity checks we should implement
+# if attachments_only and ("attachments" not in msg or not msg["attachments"]) and log:
+# if log:
+#     print(f"Skipping message (No attachments): {date_str if 'date_str' in locals() else 'Unknown Date'} - {sender if 'sender' in locals() else 'Unknown Sender'}")
+#     print(f"Message Details: {json.dumps(msg, indent=2)}")
+#     print('should not have been here')
+#     exit
+# continue  # Skip this message if there are no attachments
