@@ -4,6 +4,31 @@ import uuid
 import sys
 from datetime import datetime
 
+def print_db_schema(db_file, key):
+    """Prints the schema of the SQLite database."""
+
+    # Connect to the database
+    db = sqlcipher.connect(str(db_file))
+    c = db.cursor()
+    # Configure SQLCipher decryption settings
+    c.execute(f"PRAGMA KEY = \"x'{key}'\"")
+    c.execute("PRAGMA cipher_page_size = 4096")
+    c.execute("PRAGMA kdf_iter = 64000")
+    c.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512")
+    c.execute("PRAGMA cipher_kdf_algorithm = PBKDF2_HMAC_SHA512")
+
+    # Execute a query to get the schema
+    query = "SELECT type, name, tbl_name, sql FROM sqlite_master WHERE type IN ('table', 'view')"
+    c.execute(query)
+
+    # Print the schema
+    for row in c.fetchall():
+        print(f"Type: {row[0]}, Name: {row[1]}, Table: {row[2]}, SQL: {row[3]}\n")
+
+    # Close the database connection
+    db.close()
+
+
 def add_file_name(msg, log):
     if 'attachments' in msg and isinstance(msg['attachments'], list):
         for att in msg['attachments']:
