@@ -14,7 +14,7 @@ import click
 import markdown
 import uuid
 from bs4 import BeautifulSoup
-from get_data import fetch_data, filter_data
+from get_data import fetch_data, filter_data, print_db_schema
 
 
 log = False
@@ -32,7 +32,7 @@ def source_location():
     if sys.platform == "linux" or sys.platform == "linux2":
         source_path = home / ".config/Signal"
     elif sys.platform == "darwin":
-        source_path = home / "Library/Application Support/Signal"
+        source_path = home / "Library/Application Support/Signal_COPY"
     elif sys.platform == "win32":
         source_path = home / "AppData/Roaming/Signal"
     else:
@@ -542,6 +542,7 @@ def main(
 
     if log:
         print(f"\nFetching data from {db_file}\n")
+    # print_db_schema(db_file, key)
     convos, contacts = fetch_data(db_file, key, manual=manual, chats=chats, conversation_id=conversation_id, log=log)
     convos, contacts = filter_data(convos, contacts, year, attachments_only, log=log)
 
