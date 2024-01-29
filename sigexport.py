@@ -15,6 +15,7 @@ import markdown
 import uuid
 from bs4 import BeautifulSoup
 from get_data import fetch_data, filter_data, print_db_schema
+from interact_with_llm import filter_by_LLM
 
 
 log = False
@@ -566,6 +567,7 @@ def main(
     # print_db_schema(db_file, key)
     convos, contacts = fetch_data(db_file, key, manual=manual, chats=chats, conversation_id=conversation_id, log=log)
     convos, contacts = filter_data(convos, contacts, year, attachments_only, log=log)
+    #convos = filter_by_LLM(convos)
 
     # ... existing code ...
 
