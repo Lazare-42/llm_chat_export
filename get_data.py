@@ -118,10 +118,25 @@ def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None, log
                         usable_members.append(name[0] if name else member)
                 contacts[cid]["members"] = usable_members
 
-    c.execute("SELECT json, conversationId " "FROM messages " "ORDER BY sent_at")
+    # Fetch reactions and store them keyed by messageId
+    reactions_query = """
+    SELECT r.messageId, r.emoji, r.fromId
+    FROM reactions r
+    """
+    c.execute(reactions_query)
+    reactions = {}
+    for reaction in c.fetchall():
+        messageId, emoji, fromId = reaction
+        if messageId not in reactions:
+            reactions[messageId] = []
+        reactions[messageId].append({'emoji': emoji, 'fromId': fromId})
+
+    # fetch messages
+    c.execute("SELECT json, conversationId, id " "FROM messages " "ORDER BY sent_at")
     for result in c:
         content = json.loads(result[0])
         cid = result[1]
+        id = result[2]
         if cid and cid in convos:
             # Process each message to handle attachments
             if not isinstance(content, dict):
@@ -130,7 +145,12 @@ def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None, log
             else:
                 # Create missing file names
                 add_file_name(content, log)
+            if id and id in reactions:
+                content['reactions'] = reactions[id]
+                #print('found emoji for message', content)
+                #print(id)
             convos[cid].append(content)
+
 
     # Insert the new filtering code here
     if conversation_id is not None:
@@ -147,7 +167,6 @@ def fetch_data(db_file, key, manual=False, chats=None, conversation_id=None, log
 
 def filter_data(conversations, contacts, year=None, attachments_only=False, log=False):
     print(attachments_only, year)
-    exit
     filtered_convos = {}
     for key, messages in conversations.items():
         filtered_messages = []

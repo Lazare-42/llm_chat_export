@@ -141,6 +141,25 @@ def make_simple(dest, conversations, contacts):
                 body = ""
             body = body.replace("`", "")  # stop md code sections forming
             body += "  "  # so that markdown newlines
+            
+            try:
+                test = msg["reactions"]
+                for reaction in test:
+                    body += "\n" 
+                    body += "\t" + reaction['emoji'] + " " + contacts[reaction['fromId']]['name']
+                    body += "  "  # so that markdown newlines
+                    body += "\n" 
+
+
+                    print(reaction)
+                    print(reaction['emoji'], "from", reaction['fromId'])
+                    print("tutu")
+                    print("is in:", contacts[msg["conversationId"]]["name"])
+                    print("body", test)
+                    #print()
+            except KeyError:
+                if log:
+                    print(f"\t\tNo reaction:\t\t{date_str}")
 
             sender = "No-Sender"
             if "type" in msg.keys() and msg["type"] == "outgoing":
@@ -152,8 +171,10 @@ def make_simple(dest, conversations, contacts):
                             num = c["number"]
                             if num is not None and num == msg["source"]:
                                 sender = c["name"]
+                                # print("sender is", sender)
                     else:
                         sender = contacts[msg["conversationId"]]["name"]
+                        # print("sender is", sender)
                 except KeyError:
                     if log:
                         print(f"\t\tNo sender:\t\t{date_str}")
